@@ -50,11 +50,14 @@ final_xtrain = path + '/src/data_res/xtrain.csv'
 final_xtest = path + '/src/data_res/xtest.csv'
 final_ytrain = path + '/src/data_res/ytrain.csv'
 final_id_test = path + '/src/data_res/id_test.csv'
+fname_bullet_final = path + '/data/bullet_final.csv'
 
 # lecture des fichiers
 df_ini = pd.read_csv(train_fname, sep=',', encoding="ISO-8859-1")
 #df = df_ini.drop(['VARIABLE_CIBLE'], axis=1)
 df_test = pd.read_csv(test_fname, sep=',', encoding="ISO-8859-1")
+
+df_bullet = pd.read_csv(fname_bullet_final, sep=',', encoding="ISO-8859-1")
 
 # creation des fichiers y_train et id_train
 y_train = df_ini['relevance']
@@ -88,10 +91,11 @@ df = df.drop(['id'], axis=1)
 
 result = pd.merge(df, df_product_descriptions, how='left', on='product_uid')
 result = pd.merge(result, df_brand, how='left', on='product_uid')
+result = pd.merge(result, df_bullet, how='left', on='product_uid')
 result['brand'] = result['brand'].replace(np.nan, ' ', regex=True)
+result = result.fillna(' ')
 
-
-result_review = result
+result_review = result#[:500]
 
 # result['brand'] = result['brand'].replace(np.nan, ' ', regex=True)
 # result_review = result.drop(['product_uid'], axis=1)
@@ -118,10 +122,11 @@ def review_to_words(review_text):
     i = review_text
     p = inflect.engine()
     review_text = str(review_text).lower()
-    #
+    # ACCENT
     review_text = re.sub(r"(\w)\.([A-Z])", r"\1 \2", review_text)
     # Saut de ligne mal geres
-    review_text = re.sub(r"(\w)([A-Z])", r"\1 \2", review_text)
+    review_text = re.sub(r"(\W)([A-Z])", r"\1 \2", review_text)
+    review_text = re.sub(r"([a-z])([A-Z])", r"\1 \2", review_text)
 
     # review_text = re.sub("(\d)+", lambda m: p.number_to_words(m.group(0)), review_text)
     # Clean ponctuation manuellement
@@ -142,6 +147,7 @@ def review_to_words(review_text):
     review_text = review_text.replace(" / ", " ")
     review_text = review_text.replace(" \\ ", " ")
     review_text = review_text.replace(".", " . ")
+    review_text = str(review_text).decode("utf-8").lower()
     review_text = review_text.replace(" x ", " xbi ")
     review_text = review_text.replace("*", " xbi ")
     review_text = review_text.replace(" by ", " xbi ")
@@ -167,21 +173,12 @@ def review_to_words(review_text):
     # On remplace des mots par des synonymes
     sentence = sentence.replace("exterior", "outdoor")
     sentence = sentence.replace("interior", "indoor")
-    sentence = sentence.replace("°"," degre")
-    sentence = sentence.replace("deg."," degre")
+    sentence = sentence.replace("°", " degre")
+    sentence = sentence.replace("deg.", " degre")
     return str(sentence)
     # .translate(string.maketrans("", ""), string.punctuation)
 
 
-def lower_str(review_text):
-    global i
-    i = review_text
-    review_text = str(review_text)
-    # review_text = review_text.encode("utf8")
-    return (review_text.lower())
-
-global i
-i = 1
 
 print '####### Start cleaning #########'
 for col in nonNumericColumns:
@@ -198,7 +195,7 @@ result_review['product_info'] = result_review['search_term']+" "+result_review['
 result_review_final = result_review.drop(['product_uid'], axis=1)
 result_review_final = result_review_final.applymap(lambda x: str(x))
 fname = path + '/data/clean_data.csv'
-result_review_final.to_csv(fname, index=False)
+result_review_final.to_csv(fname, index=False, encoding="utf-8")
 
 fname_data_concat = path + '/data/concat_data.csv'
 # result.to_csv(fname_data_concat, index=False)

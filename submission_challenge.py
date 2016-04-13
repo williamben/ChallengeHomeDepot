@@ -16,6 +16,7 @@ X_test = pd.read_csv(final_xtest, sep=',', na_values='(MISSING)', encoding="utf-
 id_test = pd.read_csv(final_id_test, sep=',', na_values='(MISSING)', encoding="utf-8")
 fname_hyperopt = '/Users/williambenhaim/Desktop/TelecomParisTech/P3/MachineLearningAvances/Challenge/HomeDepot/data/result_hyperopt.csv'
 resultat_hyperopt = pd.read_csv(fname_hyperopt, sep=',', na_values='(MISSING)', encoding="utf-8")
+y_train =(y_train-1)/2
 
 
 def create_submission(resultat_hyperopt, nombre):
@@ -27,9 +28,13 @@ def create_submission(resultat_hyperopt, nombre):
         best_param['n_estimators'] = int(best_param['n_estimators'])
         params = best_param
         params['nthread'] = -1
+        params['objective'] = 'reg:logistic'
+        print params
         gbm = xgb.XGBRegressor(**params)
+
         gbm.fit(X_train, y_train, eval_metric="rmse")
         y_pred = gbm.predict(X_test)
+        y_pred = y_pred*2+1
         y_pred[y_pred < 1] = 1
         y_pred[y_pred > 3] = 3
         y_pred_res += y_pred

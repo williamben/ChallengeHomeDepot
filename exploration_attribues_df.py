@@ -1,3 +1,5 @@
+# -*- coding: ISO-8859-1 -*-
+# encoding=utf8  
 import numpy as np
 import pandas as pd
 from nltk.stem.porter import *
@@ -8,6 +10,46 @@ attributes_fname = path + '/input/attributes.csv'
 allcolor_fname = path + '/input/allColor.csv'
 allcolor = pd.read_csv(allcolor_fname, sep=',')
 df_attributes = pd.read_csv(attributes_fname, sep=',')#, encoding="ISO-8859-1")
+
+df_brand = df_attributes[df_attributes['name'] == 'Brand']
+res_bullet = pd.DataFrame(np.unique(df_attributes['product_uid']))
+res_bullet.columns = ['product_uid']
+
+
+def concat_bullet(name_attr):
+    df_tmp = df_attributes[df_attributes['name'] == name_attr]
+    df_tmp = df_tmp.rename(columns={'value': name_attr})
+
+    return  df_tmp.drop(['name'], axis=1)
+
+
+for i in xrange(1, 20):
+    if i < 10:
+        name_attr = 'Bullet0' + str(i)
+    else:
+        name_attr = 'Bullet' + str(i)
+    res = concat_bullet(name_attr)
+    res_bullet = pd.merge(res, res_bullet, how='outer', on='product_uid')
+res_bullet_concat = ''
+res_bullet = res_bullet.fillna('')
+res_bullet = res_bullet.sort_values(
+    'product_uid', axis=0, ascending=[True])
+
+
+for i in xrange(1, 20):
+    if i < 10:
+        name_attr = 'Bullet0' + str(i)
+    else:
+        name_attr = 'Bullet' + str(i)
+
+    res_bullet_concat = res_bullet_concat + ' ' + res_bullet[name_attr]
+
+res_bullet_concat = pd.DataFrame(res_bullet_concat)
+res_bullet_final = pd.concat([res_bullet_concat, pd.DataFrame(res_bullet['product_uid'])], axis=1, ignore_index=True)
+res_bullet_final.columns = ['bullet', 'product_uid']
+fname_bullet_final = path + '/data/bullet_final .csv'
+res_bullet_final.to_csv(fname_bullet_final, index=False)
+
 
 int_ext = df_attributes[df_attributes['name'] == 'Interior/Exterior']
 int_ext = int_ext.rename(columns={'value': 'int_ext'})
@@ -44,11 +86,15 @@ df_material = df_material.drop(['name'], axis=1)
 df_material = df_material.rename(columns={'value': 'material'})
 df_material = df_material.fillna(' ')
 
+
 def clean_attr(sentence):
     sentence = str(sentence)
+    # ACCENT
     sentence = re.sub(r"(\w)\.([A-Z])", r"\1 \2", sentence)
     # Saut de ligne mal geres
-    sentence = re.sub(r"(\w)([A-Z])", r"\1 \2", sentence)
+    sentence = re.sub(r"(\W)([A-Z])", r"\1 \2", sentence)
+    sentence = re.sub(r"([a-z])([A-Z])", r"\1 \2", sentence)
+    sentence = str(sentence).lower()
     sentence = re.sub(r"([0-9])([a-z])", r"\1 \2", sentence)
     sentence = re.sub(r"([a-z])([0-9])", r"\1 \2", sentence)
     sentence = sentence.decode("utf-8").lower()
@@ -70,7 +116,7 @@ def clean_attr(sentence):
     sentence = sentence.replace("exterior", "outdoor")
     sentence = sentence.replace("interior", "indoor")
     sentence = sentence.replace("multi", " ")
-    words = str(sentence).decode("utf-8").lower().split()
+    words = str(sentence).lower().split()
     stops = set(stopwords.words("english"))
     words = [stemmer.stem(w) for w in words if not (w or stemmer.stem(w)) in stops]
     rd = " ".join(sorted(set(words), key=words.index))
@@ -88,7 +134,7 @@ def multi_color(rd):
         return rd
 
 print '##### START'
-df_color_tmp = df_color_tmp.applymap(lambda x:  clean_attr(x))# .encode("utf-8")))
+df_color_tmp = df_color_tmp.applymap(lambda x:  clean_attr(x))#.encode("utf-8")))
 df_color_tmp = df_color_tmp.applymap(lambda x:  multi_color(x.encode("utf-8")))
 df_out_in_tmp = df_out_in_tmp.applymap(lambda x:  clean_attr(x.encode("utf-8")))
 df_material_tmp = df_material['material'].apply(lambda x: clean_attr(x)) # .encode("utf-8")))
